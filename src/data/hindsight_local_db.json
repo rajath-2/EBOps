@@ -1,0 +1,199 @@
+{
+  "architecture-decisions": [
+    {
+      "content": "ADR ADR-004: Use Istio service mesh for inter-service mTLS\n        Date: 2023-11-01 | Status: accepted\n        Context: Microservices communicating over plain HTTP created man-in-the-middle risk across 12 internal services.\n        Decision: Adopt Istio with strict mTLS mode across all namespaces. All inter-service traffic must be encrypted and mutually authenticated.\n        Consequences: Increased operational complexity and sidecar overhead (~50ms added latency on cold path). Unified security boundary across the mesh.\n        Services affected: api-gateway, auth-service, user-service, notification-service",
+      "metadata": {
+        "adr_id": "ADR-004",
+        "status": "accepted",
+        "services": "api-gateway,auth-service,user-service,notification-service",
+        "tags": "security,networking,mtls,istio"
+      }
+    },
+    {
+      "content": "ADR ADR-011: Node.js 18 LTS as standard runtime for all backend services\n        Date: 2023-08-15 | Status: accepted\n        Context: Multiple Node versions (14, 16, 18) running in production caused inconsistent behavior and maintenance overhead.\n        Decision: Standardize on Node.js 18 LTS across all backend services. Node 14 and 16 to be deprecated by Q1 2024.\n        Consequences: All services share runtime vulnerability surface. A critical Node.js CVE affects every backend service simultaneously.\n        Services affected: api-gateway, auth-service, user-service, notification-service, reporting-service, billing-service",
+      "metadata": {
+        "adr_id": "ADR-011",
+        "status": "accepted",
+        "services": "api-gateway,auth-service,user-service,notification-service,reporting-service,billing-service",
+        "tags": "runtime,node,standardization"
+      }
+    },
+    {
+      "content": "ADR ADR-017: Nginx 1.24 as ingress controller — standardized ingress layer\n        Date: 2024-01-10 | Status: accepted\n        Context: Multiple ingress solutions (HAProxy, Traefik, Nginx) in use across environments. No unified TLS termination policy.\n        Decision: Standardize on Nginx 1.24 as the single ingress controller. All external traffic terminates TLS at the Nginx layer before entering the mesh.\n        Consequences: Single ingress failure point. Nginx CVEs have immediate blast radius on all externally-facing services. Canary rollout required before fleet update per ADR-038.\n        Services affected: ingress, api-gateway",
+      "metadata": {
+        "adr_id": "ADR-017",
+        "status": "accepted",
+        "services": "ingress,api-gateway",
+        "tags": "networking,nginx,ingress,tls"
+      }
+    },
+    {
+      "content": "ADR ADR-022: PostgreSQL 15 with PgBouncer connection pooling\n        Date: 2023-12-05 | Status: accepted\n        Context: Database connection exhaustion under load. Each service maintaining its own connection pool led to thundering herd on the primary.\n        Decision: All services connect to PostgreSQL 15 via a shared PgBouncer pool in transaction mode. Direct connections to the primary are disallowed except from migrations.\n        Consequences: PgBouncer is a critical shared dependency. A vulnerability in PgBouncer or the shared pool config affects all database-connected services simultaneously.\n        Services affected: db-primary, reporting-service, billing-service, user-service",
+      "metadata": {
+        "adr_id": "ADR-022",
+        "status": "accepted",
+        "services": "db-primary,reporting-service,billing-service,user-service",
+        "tags": "database,postgres,pgbouncer,pooling"
+      }
+    },
+    {
+      "content": "ADR ADR-031: OpenSSL 3.x for all TLS termination\n        Date: 2024-02-01 | Status: accepted\n        Context: Mixed OpenSSL versions (1.1.x and 3.x) created inconsistent cipher support and dual patch surface.\n        Decision: All services and infrastructure components must use OpenSSL 3.x. OpenSSL 1.1.x is end-of-life and must be removed.\n        Consequences: Unified OpenSSL version reduces patch surface but means OpenSSL 3.x CVEs affect ingress, auth-service, and all TLS-terminating components simultaneously.\n        Services affected: ingress, auth-service, api-gateway",
+      "metadata": {
+        "adr_id": "ADR-031",
+        "status": "accepted",
+        "services": "ingress,auth-service,api-gateway",
+        "tags": "security,openssl,tls,cryptography"
+      }
+    },
+    {
+      "content": "ADR ADR-038: Canary deployment required before fleet rollout for all critical services\n        Date: 2024-03-15 | Status: accepted\n        Context: Two production incidents caused by fleet-wide rollouts without staged validation (INC-2024-003, INC-2024-011).\n        Decision: All patches to critical services (ingress, auth-service, api-gateway) must follow: 5% canary for 30 minutes, then 25% for 60 minutes, then fleet. Automated rollback on error rate > 0.1%.\n        Consequences: Minimum 90-minute delay between patch availability and full fleet coverage. Security patches for actively exploited CVEs may require emergency exception process.\n        Services affected: ingress, api-gateway, auth-service",
+      "metadata": {
+        "adr_id": "ADR-038",
+        "status": "accepted",
+        "services": "ingress,api-gateway,auth-service",
+        "tags": "deployment,canary,safety,rollout"
+      }
+    },
+    {
+      "content": "ADR ADR-044: Auth service must not be patched during business hours (09:00–18:00 local)\n        Date: 2024-04-01 | Status: accepted\n        Context: Auth service patch in INC-2025-002 caused 12-minute authentication outage during peak hours, impacting 40k active sessions.\n        Decision: auth-service patches are only permitted outside business hours (before 09:00 or after 18:00 local time) unless a P1 security incident is declared by the CISO.\n        Consequences: Auth service vulnerability window may be up to 9 business hours longer than other services. Actively exploited auth CVEs require CISO escalation to bypass this constraint.\n        Services affected: auth-service",
+      "metadata": {
+        "adr_id": "ADR-044",
+        "status": "accepted",
+        "services": "auth-service",
+        "tags": "auth,change-management,availability,patching"
+      }
+    },
+    {
+      "content": "ADR ADR-051: Replace Log4j with Pino across all Node.js services\n        Date: 2022-01-15 | Status: accepted\n        Context: Log4Shell (CVE-2021-44228) exposed Log4j usage in three services. Emergency patch required 6-hour incident response.\n        Decision: All Node.js services must use Pino for structured logging. Log4j and any JVM-based logging dependencies are prohibited. Automated dependency scan in CI enforces this.\n        Consequences: Eliminated Log4j attack surface across all Node services. Pino is now the standard — any future logging CVEs are scoped to Pino only.\n        Services affected: api-gateway, auth-service, user-service, notification-service, reporting-service, billing-service",
+      "metadata": {
+        "adr_id": "ADR-051",
+        "status": "accepted",
+        "services": "api-gateway,auth-service,user-service,notification-service,reporting-service,billing-service",
+        "tags": "logging,log4j,pino,security,dependency"
+      }
+    }
+  ],
+  "past-incidents": [
+    {
+      "content": "Incident INC-2024-003: Jenkins arbitrary file read exploited via Istio mesh egress\n        Date: 2024-02-12 | Severity: P1\n        CVE: CVE-2024-23897\n        Services affected: api-gateway, auth-service\n        Blast radius reasoning: Jenkins instance shared the Istio mesh namespace with api-gateway and auth-service. The arbitrary file read allowed exfiltration of mTLS certificates mounted in the shared namespace, per ADR-004's mesh architecture. Blast radius was wider than expected because mTLS certs were stored on a shared volume.\n        Resolution: Rotated all mTLS certificates. Isolated Jenkins to a separate namespace outside the service mesh. Tightened Istio egress policies to block Jenkins from accessing service namespaces. Full resolution in 4 hours.\n        ADRs referenced: ADR-004\n        Lessons learned: Service mesh doesn't replace component-level network isolation. Build tooling must be in separate namespaces from production services. Certificate storage must not be on shared volumes.",
+      "metadata": {
+        "incident_id": "INC-2024-003",
+        "severity": "P1",
+        "cve_id": "CVE-2024-23897",
+        "services": "api-gateway,auth-service",
+        "adr_refs": "ADR-004"
+      }
+    },
+    {
+      "content": "Incident INC-2024-011: HTTP/2 rapid reset attack caused ingress saturation\n        Date: 2024-06-03 | Severity: P1\n        CVE: CVE-2023-44487\n        Services affected: ingress, api-gateway\n        Blast radius reasoning: Nginx 1.23 (pre-ADR-017 standardization) was vulnerable to HTTP/2 rapid reset. The ingress handled all external traffic per ADR-017, making it the single point of failure. Once ingress saturated, all externally-facing services became unreachable.\n        Resolution: Emergency upgrade to Nginx 1.24.1 which included the HTTP/2 rapid reset fix. Triggered ADR-038 emergency exception process. Canary to fleet in 45 minutes (compressed from standard 90 min). Total outage: 67 minutes.\n        ADRs referenced: ADR-017, ADR-038\n        Lessons learned: Ingress is maximum blast radius for network-layer CVEs. ADR-038's canary requirement adds delay during active exploitation — emergency exception process was unclear and caused 20-minute coordination overhead. Emergency runbook updated.",
+      "metadata": {
+        "incident_id": "INC-2024-011",
+        "severity": "P1",
+        "cve_id": "CVE-2023-44487",
+        "services": "ingress,api-gateway",
+        "adr_refs": "ADR-017,ADR-038"
+      }
+    },
+    {
+      "content": "Incident INC-2025-002: XZ Utils backdoor detected in auth-service build image\n        Date: 2025-01-31 | Severity: P1\n        CVE: CVE-2024-3094\n        Services affected: auth-service\n        Blast radius reasoning: auth-service build image included xz-utils 5.6.0 which contained the backdoor. Blast radius was limited to auth-service because the backdoor targets SSH daemons and auth-service is the only service running sshd in its container (for legacy jump host access).\n        Resolution: Rebuilt auth-service image from clean base. Removed sshd from container (ADR created to prohibit sshd in containers). ADR-044 was invoked — patch scheduled for 19:00 to avoid business hours. Detection-to-patch: 6 hours, but actual exposure window was post-business-hours only.\n        ADRs referenced: ADR-044\n        Lessons learned: ADR-044 added 6 hours to remediation window for a supply-chain backdoor. CISO escalation path needs clearer criteria for bypassing the constraint. sshd must not run in production containers.",
+      "metadata": {
+        "incident_id": "INC-2025-002",
+        "severity": "P1",
+        "cve_id": "CVE-2024-3094",
+        "services": "auth-service",
+        "adr_refs": "ADR-044"
+      }
+    },
+    {
+      "content": "Incident INC-2025-007: PgBouncer connection pool overflow caused cascading DB failures\n        Date: 2025-03-14 | Severity: P2\n        CVE: CVE-2025-1234\n        Services affected: reporting-service, db-primary, billing-service\n        Blast radius reasoning: CVE triggered buffer overflow in PgBouncer under high connection load. Since all database-connected services share the PgBouncer pool per ADR-022, a crash of PgBouncer disconnected all three services from the database simultaneously rather than isolating the affected service.\n        Resolution: Patched PgBouncer and restarted pool. Added circuit breaker at the application layer to handle pool unavailability gracefully. Reporting and billing degraded to read-only mode during the 34-minute window.\n        ADRs referenced: ADR-022\n        Lessons learned: Shared connection pool creates correlated failure domain. ADR-022 needs a follow-up to add per-service pool isolation for critical services. PgBouncer is now a P1 dependency requiring the same patching urgency as ingress.",
+      "metadata": {
+        "incident_id": "INC-2025-007",
+        "severity": "P2",
+        "cve_id": "CVE-2025-1234",
+        "services": "reporting-service,db-primary,billing-service",
+        "adr_refs": "ADR-022"
+      }
+    },
+    {
+      "content": "Incident INC-2025-019: GnuTLS timing attack — OpenSSL-only deployment confirmed safe\n        Date: 2025-04-22 | Severity: P3\n        CVE: CVE-2024-0553\n        Services affected: \n        Blast radius reasoning: CVE-2024-0553 is a timing side-channel in GnuTLS RSA key exchange. ADR-031 mandated OpenSSL 3.x for all TLS termination. Dependency scan confirmed zero GnuTLS usage across the fleet. No services were affected.\n        Resolution: No action required. Documented as a successful ADR outcome — ADR-031's OpenSSL standardization eliminated the blast radius entirely. Triage-to-close: 45 minutes.\n        ADRs referenced: ADR-031\n        Lessons learned: ADR-031 paid off. Consistent OpenSSL standardization scoped this CVE to zero services. This is the model outcome for dependency standardization ADRs.",
+      "metadata": {
+        "incident_id": "INC-2025-019",
+        "severity": "P3",
+        "cve_id": "CVE-2024-0553",
+        "services": "",
+        "adr_refs": "ADR-031"
+      }
+    }
+  ],
+  "cve-responses": [
+    {
+      "content": "Triage decision for CVE-2025-1100: low severity. Reasoning: The vulnerability is low-severity and requires user interaction to exploit, making it a relatively low-risk issue.",
+      "metadata": {
+        "cve_id": "CVE-2025-1100",
+        "stage": "triage"
+      }
+    },
+    {
+      "content": "CVE Response for CVE-2025-1100: The blast radius is moderate due to the use of Nginx as the single ingress controller for all services (ADR-031, ADR-038). However, the impact is limited to information disclosure and does not allow for code execution or data modification.. Affected: api-gateway, auth-service, user-service, notification-service, reporting-service, billing-service",
+      "metadata": {
+        "cve_id": "CVE-2025-1100",
+        "confidence": "medium",
+        "stage": "analysis"
+      }
+    },
+    {
+      "content": "Triage decision for CVE-2025-4422: critical severity. Reasoning: High CVSS score (9.8) and potential for unauthenticated remote code execution via a malicious certificate chain.",
+      "metadata": {
+        "cve_id": "CVE-2025-4422",
+        "stage": "triage"
+      }
+    },
+    {
+      "content": "CVE Response for CVE-2025-4422: All backend services are potentially affected due to the shared vulnerability surface created by standardizing on a single runtime.. Affected: All backend services",
+      "metadata": {
+        "cve_id": "CVE-2025-4422",
+        "confidence": "high",
+        "stage": "analysis"
+      }
+    },
+    {
+      "content": "Triage decision for CVE-2025-2201: high severity. Reasoning: The vulnerability allows request smuggling, enabling attackers to bypass security controls, and has a high CVSS score of 8.2.",
+      "metadata": {
+        "cve_id": "CVE-2025-2201",
+        "stage": "triage"
+      }
+    },
+    {
+      "content": "CVE Response for CVE-2025-2201: The vulnerability affects multiple backend services, including api-gateway, auth-service, user-service, notification-service, reporting-service, and billing-service, which could lead to request smuggling and bypassing of security controls.. Affected: api-gateway, auth-service, user-service, notification-service, reporting-service, billing-service",
+      "metadata": {
+        "cve_id": "CVE-2025-2201",
+        "confidence": "high",
+        "stage": "analysis"
+      }
+    },
+    {
+      "content": "Triage decision for CVE-2025-1876: high severity. Reasoning: The CVE allows attackers to bypass mTLS enforcement, enabling unauthenticated service-to-service communication, which poses a significant risk to network security.",
+      "metadata": {
+        "cve_id": "CVE-2025-1876",
+        "stage": "triage"
+      }
+    },
+    {
+      "content": "CVE Response for CVE-2025-1876: The blast radius is moderate, as the vulnerability affects multiple services that use Istio for service-to-service communication. However, the impact is limited to the services that use Istio and do not have direct connections to the database, as per ADR-022.. Affected: db-primary, reporting-service, billing-service, user-service",
+      "metadata": {
+        "cve_id": "CVE-2025-1876",
+        "confidence": "high",
+        "stage": "analysis"
+      }
+    }
+  ],
+  "shift-handoffs": [
+    {
+      "content": "Shift handoff 2026-05-19T10:59:19.030Z: Since your last shift: This shift handled two CVEs, CVE-2025-2201 and CVE-2025-1876, and triaged CVE-2025-1100 as low severity due to the requirement of user interaction for exploitation. The shift also reviewed relevant incident history, including the classification of PgBouncer as a P1 dependency and the implementation of per-service connection pool isolation for critical services.",
+      "metadata": {
+        "shift_start": "2026-05-19T02:59:15.307Z",
+        "cve_count": "2"
+      }
+    }
+  ]
+}

@@ -48,42 +48,24 @@ function nodeStatus(nodeId: string, pipeline: PipelineState): 'idle' | 'active' 
 
 function PipelineVisualizer({ pipeline }: { pipeline: PipelineState }) {
   return (
-    <div className="flex flex-col gap-0">
+    <div className="eb-pipeline">
       {PIPELINE_NODES.map((node, i) => {
         const status = nodeStatus(node.id, pipeline);
         const isSkipped = status === 'skipped';
         return (
           <div key={node.id}>
-            <div className={`flex items-center gap-3 p-3 border rounded transition-all duration-300 ${
-              status === 'active' ? 'border-blue-400 bg-blue-50' :
-              status === 'done'   ? 'border-slate-900 bg-slate-900' :
-              isSkipped           ? 'border-slate-100 bg-slate-50 opacity-40' :
-                                    'border-slate-200 bg-white'
-            }`}>
-              <div className={`w-2 h-2 rounded-full flex-shrink-0 ${
-                status === 'active' ? 'bg-blue-500 animate-pulse' :
-                status === 'done'   ? 'bg-white' :
-                isSkipped           ? 'bg-slate-300' :
-                                      'bg-slate-200'
-              }`} />
-              <div className="flex-1 min-w-0">
-                <span className={`text-sm font-medium ${
-                  status === 'done' ? 'text-white' :
-                  status === 'active' ? 'text-blue-700' :
-                  'text-slate-500'
-                }`}>{node.label}</span>
-                <span className={`ml-2 text-xs font-mono ${
-                  status === 'done' ? 'text-slate-300' :
-                  status === 'active' ? 'text-blue-500' :
-                  'text-slate-400'
-                }`}>{node.model}</span>
+            <div className={`eb-pipeline-node ${status} ${isSkipped ? 'skipped' : ''}`}>
+              <div className="eb-node-dot" />
+              <div className="eb-node-text">
+                <span className="eb-node-label">{node.label}</span>
+                <span className="eb-node-model">{node.model}</span>
               </div>
-              {status === 'active' && <Loader2 className="w-3 h-3 text-blue-500 animate-spin flex-shrink-0" />}
-              {status === 'done' && <CheckCircle2 className="w-3 h-3 text-slate-300 flex-shrink-0" />}
-              {isSkipped && <span className="text-xs text-slate-400">skipped</span>}
+              {status === 'active' && <Loader2 className="eb-icon-spin" style={{color: 'var(--color-blue-500)'}} />}
+              {status === 'done' && <CheckCircle2 className="eb-icon-small" style={{color: 'var(--color-slate-300)'}} />}
+              {isSkipped && <span style={{fontSize: '0.75rem', color: 'var(--color-slate-400)'}}>skipped</span>}
             </div>
             {i < PIPELINE_NODES.length - 1 && (
-              <div className="w-px h-3 bg-slate-200 ml-4" />
+              <div className="eb-node-connector" />
             )}
           </div>
         );
@@ -97,39 +79,39 @@ function PipelineVisualizer({ pipeline }: { pipeline: PipelineState }) {
 function ResultPanel({ result }: { result: AnalysisResult }) {
   const { classification, response } = result;
   return (
-    <div className="grid grid-cols-2 gap-6 mt-6">
+    <div className="eb-result-grid">
       {/* Left: Blast Radius */}
       <div>
-        <h3 className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-3">Blast Radius</h3>
+        <h3 className="eb-card-title">Blast Radius</h3>
         {!response ? (
-          <div className="border border-slate-200 rounded p-4">
-            <p className="text-sm text-slate-500">No deep analysis — severity below escalation threshold.</p>
-            <p className="text-xs text-slate-400 mt-1 font-mono">
+          <div className="eb-info-box">
+            <p style={{fontSize: '0.85rem', color: 'var(--color-slate-500)'}}>No deep analysis — severity below escalation threshold.</p>
+            <p className="eb-info-box-mono">
               {classification.severity.toUpperCase()} | CVSS below 7.0 | routed: cheap model only
             </p>
           </div>
         ) : (
-          <div className="flex flex-col gap-2">
+          <div className="eb-pipeline">
             {response.affected_services.map((svc) => (
-              <div key={svc.name} className="border border-slate-200 rounded p-3">
-                <div className="flex items-center gap-2 mb-1">
-                  <span className="text-sm font-medium text-slate-900">{svc.name}</span>
+              <div key={svc.name} className="eb-service-card">
+                <div className="eb-service-header">
+                  <span className="eb-service-name">{svc.name}</span>
                   {svc.adr_reference && (
-                    <span className="font-mono text-xs bg-slate-100 text-slate-600 px-1.5 py-0.5 rounded">{svc.adr_reference}</span>
+                    <span className="eb-tag eb-tag-adr">{svc.adr_reference}</span>
                   )}
                   {svc.incident_reference && (
-                    <span className="font-mono text-xs bg-amber-50 text-amber-700 px-1.5 py-0.5 rounded">{svc.incident_reference}</span>
+                    <span className="eb-tag eb-tag-inc">{svc.incident_reference}</span>
                   )}
                 </div>
-                <p className="text-xs text-slate-500">{svc.reason}</p>
+                <p className="eb-service-reason">{svc.reason}</p>
               </div>
             ))}
-            <div className="border border-slate-200 rounded p-3 mt-1">
-              <p className="text-xs text-slate-600">{response.blast_radius_summary}</p>
-              <span className={`mt-1 inline-block text-xs font-mono px-1.5 py-0.5 rounded ${
-                response.confidence === 'high' ? 'bg-green-50 text-green-700' :
-                response.confidence === 'medium' ? 'bg-amber-50 text-amber-700' :
-                'bg-red-50 text-red-700'
+            <div className="eb-summary-box">
+              <p className="eb-summary-text">{response.blast_radius_summary}</p>
+              <span className={`eb-tag ${
+                response.confidence === 'high' ? 'eb-tag-confidence-high' :
+                response.confidence === 'medium' ? 'eb-tag-confidence-medium' :
+                'eb-tag-confidence-low'
               }`}>confidence: {response.confidence}</span>
             </div>
           </div>
@@ -137,28 +119,28 @@ function ResultPanel({ result }: { result: AnalysisResult }) {
       </div>
 
       {/* Right: Memory Highlights + Remediation */}
-      <div className="flex flex-col gap-4">
+      <div className="eb-pipeline" style={{gap: 'var(--space-6)'}}>
         {/* Memory Highlights — top priority */}
         {response && (
           <div>
-            <h3 className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-3">Memory Highlights</h3>
-            <div className="flex flex-col gap-2">
+            <h3 className="eb-card-title">Memory Highlights</h3>
+            <div className="eb-pipeline">
               {response.affected_services
                 .filter(s => s.adr_reference || s.incident_reference)
                 .map((svc, i) => (
-                  <div key={i} className="border-l-2 border-blue-500 pl-3 py-1">
-                    <span className="font-mono text-xs text-blue-700 font-semibold">
+                  <div key={i} className="eb-highlight eb-highlight-adr">
+                    <span className="eb-highlight-ref">
                       {svc.adr_reference ?? svc.incident_reference}
                     </span>
-                    <p className="text-xs text-slate-500 mt-0.5">{svc.reason}</p>
+                    <p className="eb-highlight-desc">{svc.reason}</p>
                   </div>
                 ))}
               {response.similar_past_incident && (
-                <div className="border-l-2 border-amber-400 pl-3 py-1">
-                  <span className="font-mono text-xs text-amber-700 font-semibold">
+                <div className="eb-highlight eb-highlight-inc">
+                  <span className="eb-highlight-ref">
                     {response.similar_past_incident.incident_id}
                   </span>
-                  <p className="text-xs text-slate-500 mt-0.5">{response.similar_past_incident.similarity_reason}</p>
+                  <p className="eb-highlight-desc">{response.similar_past_incident.similarity_reason}</p>
                 </div>
               )}
             </div>
@@ -168,25 +150,23 @@ function ResultPanel({ result }: { result: AnalysisResult }) {
         {/* Remediation Steps */}
         {response && (
           <div>
-            <h3 className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-3">Remediation Steps</h3>
-            <div className="flex flex-col gap-2">
+            <h3 className="eb-card-title">Remediation Steps</h3>
+            <div className="eb-pipeline">
               {response.remediation_steps.map((step) => (
-                <div key={step.step} className="border border-slate-200 rounded p-3">
-                  <div className="flex items-start gap-2">
-                    <span className="font-mono text-xs text-slate-400 flex-shrink-0 mt-0.5">{step.step}.</span>
-                    <div className="flex-1">
-                      <p className="text-xs text-slate-700">{step.action}</p>
-                      <div className="flex gap-2 mt-1">
-                        <span className="text-xs text-slate-400">{step.owner}</span>
-                        <span className="text-xs text-slate-300">·</span>
-                        <span className="text-xs text-slate-400">{step.estimated_effort}</span>
-                      </div>
-                      {step.architectural_constraint && (
-                        <div className="mt-2 bg-amber-50 border border-amber-200 rounded px-2 py-1">
-                          <p className="text-xs text-amber-700">{step.architectural_constraint}</p>
-                        </div>
-                      )}
+                <div key={step.step} className="eb-step">
+                  <span className="eb-step-num">{step.step}.</span>
+                  <div className="eb-step-content">
+                    <p className="eb-step-action">{step.action}</p>
+                    <div className="eb-step-meta">
+                      <span>{step.owner}</span>
+                      <span className="eb-step-meta-dot">·</span>
+                      <span>{step.estimated_effort}</span>
                     </div>
+                    {step.architectural_constraint && (
+                      <div className="eb-step-constraint">
+                        {step.architectural_constraint}
+                      </div>
+                    )}
                   </div>
                 </div>
               ))}
@@ -206,7 +186,7 @@ export default function Home() {
   const [pipeline, setPipeline] = useState<PipelineState>({ stage: 'idle' });
   const [result, setResult] = useState<AnalysisResult | null>(null);
   const [sessionCost, setSessionCost] = useState(0);
-  const [sessionCVEIds, setSessionCVEIds] = useState<string[]>([]); // ← tracks CVEs for handoff
+  const [sessionCVEIds, setSessionCVEIds] = useState<string[]>([]);
   const [hindsightConnected, setHindsightConnected] = useState<boolean | null>(null);
 
   // Memory Explorer state
@@ -219,7 +199,7 @@ export default function Home() {
   const [handoffResult, setHandoffResult] = useState<HandoffBriefing | null>(null);
 
   // Config state
-  const [budgetValue, setBudgetValue] = useState('0.10'); // ← controlled input, not defaultValue
+  const [budgetValue, setBudgetValue] = useState('0.10');
 
   // Check Hindsight health on mount
   useEffect(() => {
@@ -228,14 +208,12 @@ export default function Home() {
       .catch(() => setHindsightConnected(false));
   }, []);
 
-  // ── Triage handler ──────────────────────────────────────────────────────────
   async function handleAnalyze() {
     if (!selectedCVE || pipeline.stage !== 'idle') return;
 
     setPipeline({ stage: 'classifying' });
     setResult(null);
 
-    // Simulate pipeline stage transitions for the visualizer
     await new Promise(r => setTimeout(r, 600));
     setPipeline(p => ({ ...p, stage: 'retaining-1' }));
     await new Promise(r => setTimeout(r, 400));
@@ -257,11 +235,9 @@ export default function Home() {
     setPipeline({ stage: 'done', escalated: data.routed_to_strong_model });
     setResult(data);
     setSessionCVEIds(prev => Array.from(new Set([...prev, data.cve_id])));
-    // Estimate cost — replace with real cascadeflow trace data when available
     setSessionCost(prev => prev + (data.routed_to_strong_model ? 0.003 : 0.0002));
   }
 
-  // ── Memory Explorer handler ─────────────────────────────────────────────────
   async function handleMemoryQuery() {
     setMemoryLoading(true);
     const res = await fetch(`/api/memory?bank=${encodeURIComponent(memoryBank)}&query=all+entries`);
@@ -270,14 +246,13 @@ export default function Home() {
     setMemoryLoading(false);
   }
 
-  // ── Handoff handler ─────────────────────────────────────────────────────────
   async function handleGenerateHandoff() {
     setHandoffLoading(true);
     const res = await fetch('/api/handoff', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        shift_start: new Date(Date.now() - 8 * 60 * 60 * 1000).toISOString(), // 8h ago
+        shift_start: new Date(Date.now() - 8 * 60 * 60 * 1000).toISOString(),
         cve_ids: sessionCVEIds,
       }),
     });
@@ -286,45 +261,40 @@ export default function Home() {
     setHandoffLoading(false);
   }
 
-  // ── Render ──────────────────────────────────────────────────────────────────
   const tabs: { id: Tab; label: string; icon: React.ReactNode }[] = [
-    { id: 'triage',  label: 'Triage',          icon: <Shield className="w-4 h-4" /> },
-    { id: 'memory',  label: 'Memory Explorer',  icon: <Database className="w-4 h-4" /> },
-    { id: 'handoff', label: 'Shift Handoff',    icon: <FileText className="w-4 h-4" /> },
-    { id: 'config',  label: 'Config',           icon: <Settings className="w-4 h-4" /> },
+    { id: 'triage',  label: 'Triage',          icon: <Shield className="eb-icon-small" /> },
+    { id: 'memory',  label: 'Memory Explorer', icon: <Database className="eb-icon-small" /> },
+    { id: 'handoff', label: 'Shift Handoff',   icon: <FileText className="eb-icon-small" /> },
+    { id: 'config',  label: 'Config',          icon: <Settings className="eb-icon-small" /> },
   ];
 
   return (
-    <div className="flex h-screen overflow-hidden">
+    <div className="eb-app-container">
       {/* Sidebar */}
-      <aside className="w-52 bg-slate-900 flex-shrink-0 flex flex-col">
-        <div className="px-4 py-4 border-b border-slate-800">
-          <span className="font-mono text-sm font-semibold text-white tracking-tight">EBOps</span>
-          <span className="block text-xs text-slate-500 mt-0.5">Engineering Ops Brain</span>
+      <aside className="eb-sidebar">
+        <div className="eb-sidebar-header">
+          <span className="eb-sidebar-title">EBOps</span>
+          <span className="eb-sidebar-subtitle">Engineering Ops Brain</span>
         </div>
-        <nav className="flex-1 py-2">
+        <nav className="eb-sidebar-nav">
           {tabs.map(tab => (
             <button
               key={tab.id}
               onClick={() => setActiveTab(tab.id)}
-              className={`w-full flex items-center gap-3 px-4 py-2.5 text-sm transition-colors ${
-                activeTab === tab.id
-                  ? 'border-l-2 border-blue-500 text-white bg-slate-800'
-                  : 'border-l-2 border-transparent text-slate-400 hover:text-slate-200'
-              }`}
+              className={`eb-nav-item ${activeTab === tab.id ? 'active' : ''}`}
             >
               {tab.icon}
               {tab.label}
             </button>
           ))}
         </nav>
-        <div className="px-4 py-3 border-t border-slate-800">
-          <div className="flex items-center gap-1.5">
-            <div className={`w-1.5 h-1.5 rounded-full ${
-              hindsightConnected === null ? 'bg-slate-500' :
-              hindsightConnected ? 'bg-green-400' : 'bg-red-400'
+        <div className="eb-sidebar-footer">
+          <div className="eb-status-indicator">
+            <div className={`eb-status-dot ${
+              hindsightConnected === null ? 'checking' :
+              hindsightConnected ? 'online' : 'offline'
             }`} />
-            <span className="text-xs text-slate-500">
+            <span>
               {hindsightConnected === null ? 'Checking...' :
                hindsightConnected ? 'Hindsight connected' : 'Hindsight offline'}
             </span>
@@ -332,42 +302,34 @@ export default function Home() {
         </div>
       </aside>
 
-      {/* Main */}
-      <div className="flex-1 flex flex-col min-w-0">
-        {/* Header */}
-        <header className="h-12 border-b border-slate-200 flex items-center justify-between px-6 flex-shrink-0">
-          <div className="flex items-center gap-1 text-sm text-slate-400">
+      {/* Main Content */}
+      <div className="eb-main-wrapper">
+        <header className="eb-header">
+          <div className="eb-header-breadcrumb">
             <span>EBOps</span>
-            <ChevronRight className="w-3 h-3" />
-            <span className="text-slate-700 capitalize">{activeTab}</span>
+            <ChevronRight className="eb-icon-small" />
+            <span className="current">{activeTab}</span>
           </div>
-          <div className="flex items-center gap-4">
-            <span className="text-xs text-slate-500">
-              Session Cost: <span className="font-mono text-slate-900">${sessionCost.toFixed(4)}</span>
+          <div className="eb-header-meta">
+            <span className="eb-cost-tracker">
+              Session Cost: <span>${sessionCost.toFixed(4)}</span>
             </span>
-            <div className={`flex items-center gap-1.5 text-xs px-2 py-1 rounded-full ${
-              hindsightConnected ? 'bg-green-50 text-green-700' : 'bg-red-50 text-red-700'
-            }`}>
-              <div className={`w-1.5 h-1.5 rounded-full ${hindsightConnected ? 'bg-green-500' : 'bg-red-500'}`} />
+            <div className={`eb-connection-badge ${hindsightConnected ? 'online' : 'offline'}`}>
+              <div className={`eb-status-dot ${hindsightConnected ? 'online' : 'offline'}`} />
               Hindsight {hindsightConnected ? 'Connected' : 'Offline'}
             </div>
           </div>
         </header>
 
-        {/* Content */}
-        <main className="flex-1 overflow-y-auto p-6">
-
-          {/* ── Triage Tab ─────────────────────────────────────────────────── */}
+        <main className="eb-main-content">
+          {/* Triage Tab */}
           {activeTab === 'triage' && (
-            <div className="grid grid-cols-3 gap-6">
-              {/* Left: Input + Pipeline */}
-              <div className="flex flex-col gap-4">
-                <div>
-                  <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">
-                    Select CVE
-                  </label>
+            <div className="eb-grid-triage">
+              <div className="eb-pipeline">
+                <div className="eb-card">
+                  <label className="eb-label">Select CVE</label>
                   <select
-                    className="w-full border border-slate-200 rounded px-3 py-2 text-sm font-mono focus:outline-none focus:border-slate-400"
+                    className="eb-select"
                     onChange={e => {
                       const cve = syntheticCVEs.find(c => c.cve_id === e.target.value) ?? null;
                       setSelectedCVE(cve);
@@ -384,50 +346,48 @@ export default function Home() {
                     ))}
                   </select>
                   {selectedCVE && (
-                    <p className="mt-2 text-xs text-slate-500 line-clamp-2">{selectedCVE.description}</p>
+                    <p className="eb-cve-desc">{selectedCVE.description}</p>
+                  )}
+
+                  <button
+                    onClick={handleAnalyze}
+                    disabled={!selectedCVE || pipeline.stage !== 'idle'}
+                    className="eb-btn-primary"
+                    style={{ marginTop: 'var(--space-4)' }}
+                  >
+                    {pipeline.stage === 'idle' ? 'Analyze CVE' : 'Analyzing...'}
+                  </button>
+                </div>
+
+                <div className="eb-card" style={{ marginTop: 'var(--space-6)' }}>
+                  <label className="eb-label" style={{ marginBottom: 'var(--space-4)' }}>Pipeline Activity</label>
+                  <PipelineVisualizer pipeline={pipeline} />
+                  
+                  {pipeline.stage === 'done' && (
+                    <div className="eb-cost-box">
+                      <div className="eb-cost-row">
+                        <span>Cheap model</span>
+                        <span>~$0.0002</span>
+                      </div>
+                      {pipeline.escalated && (
+                        <div className="eb-cost-row">
+                          <span>Strong model</span>
+                          <span>~$0.0031</span>
+                        </div>
+                      )}
+                      <div className="eb-cost-total">
+                        <span>This query</span>
+                        <span>${pipeline.escalated ? '0.0033' : '0.0002'}</span>
+                      </div>
+                    </div>
                   )}
                 </div>
-
-                <button
-                  onClick={handleAnalyze}
-                  disabled={!selectedCVE || pipeline.stage !== 'idle'}
-                  className="w-full bg-slate-900 text-white text-sm py-2 rounded disabled:opacity-40 disabled:cursor-not-allowed hover:bg-slate-700 transition-colors"
-                >
-                  {pipeline.stage === 'idle' ? 'Analyze CVE' : 'Analyzing...'}
-                </button>
-
-                <div>
-                  <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">
-                    Pipeline
-                  </label>
-                  <PipelineVisualizer pipeline={pipeline} />
-                </div>
-
-                {pipeline.stage === 'done' && (
-                  <div className="border border-slate-200 rounded p-3 text-xs">
-                    <div className="flex justify-between text-slate-500 mb-1">
-                      <span>Cheap model</span>
-                      <span className="font-mono">~$0.0002</span>
-                    </div>
-                    {pipeline.escalated && (
-                      <div className="flex justify-between text-slate-500">
-                        <span>Strong model</span>
-                        <span className="font-mono">~$0.0031</span>
-                      </div>
-                    )}
-                    <div className="flex justify-between text-slate-900 font-medium mt-2 pt-2 border-t border-slate-100">
-                      <span>This query</span>
-                      <span className="font-mono">${pipeline.escalated ? '0.0033' : '0.0002'}</span>
-                    </div>
-                  </div>
-                )}
               </div>
 
-              {/* Right: Result (spans 2 cols) */}
-              <div className="col-span-2">
+              <div>
                 {!result ? (
-                  <div className="h-full flex items-center justify-center text-slate-300 border border-dashed border-slate-200 rounded">
-                    <p className="text-sm">Select a CVE and click Analyze</p>
+                  <div className="eb-result-empty">
+                    <p>Select a CVE and click Analyze to view deep context</p>
                   </div>
                 ) : (
                   <ResultPanel result={result} />
@@ -436,19 +396,17 @@ export default function Home() {
             </div>
           )}
 
-          {/* ── Memory Tab ─────────────────────────────────────────────────── */}
+          {/* Memory Explorer Tab */}
           {activeTab === 'memory' && (
-            <div className="max-w-3xl">
-              <div className="flex gap-2 mb-4">
+            <div className="eb-card eb-max-w-3xl">
+              <h2 className="eb-card-title">Memory Explorer</h2>
+              <div className="eb-flex eb-gap-2 eb-mb-4">
                 {['architecture-decisions', 'past-incidents', 'cve-responses'].map(bank => (
                   <button
                     key={bank}
                     onClick={() => setMemoryBank(bank)}
-                    className={`text-xs font-mono px-3 py-1.5 rounded border transition-colors ${
-                      memoryBank === bank
-                        ? 'bg-slate-900 text-white border-slate-900'
-                        : 'bg-white text-slate-600 border-slate-200 hover:border-slate-400'
-                    }`}
+                    className={`eb-btn-secondary ${memoryBank === bank ? 'active' : ''}`}
+                    style={memoryBank === bank ? { background: 'var(--color-slate-900)', color: 'white', borderColor: 'var(--color-slate-900)' } : {}}
                   >
                     {bank}
                   </button>
@@ -456,123 +414,119 @@ export default function Home() {
                 <button
                   onClick={handleMemoryQuery}
                   disabled={memoryLoading}
-                  className="ml-auto text-xs px-3 py-1.5 border border-slate-200 rounded hover:border-slate-400 transition-colors disabled:opacity-40"
+                  className="eb-btn-secondary"
+                  style={{ marginLeft: 'auto' }}
                 >
-                  {memoryLoading ? 'Loading...' : 'Fetch'}
+                  {memoryLoading ? 'Loading...' : 'Fetch Memory'}
                 </button>
               </div>
-              <div className="border border-slate-200 rounded p-4 min-h-64">
-                {memoryResult ? (
-                  <pre className="text-xs font-mono text-slate-700 whitespace-pre-wrap">{memoryResult}</pre>
-                ) : (
-                  <p className="text-sm text-slate-400">Select a bank and click Fetch to view memories.</p>
-                )}
+              
+              <div className="eb-pre" style={{ minHeight: '250px' }}>
+                {memoryResult ? memoryResult : 'Select a bank and click Fetch to view internal architectural memories.'}
               </div>
+
               {sessionCVEIds.length > 0 && (
-                <div className="mt-3 text-xs text-blue-600 border border-blue-200 bg-blue-50 rounded px-3 py-2">
+                <div style={{ marginTop: 'var(--space-4)', color: 'var(--color-blue-700)', background: 'var(--color-blue-50)', padding: 'var(--space-3)', borderRadius: 'var(--radius-md)', fontSize: '0.85rem' }}>
                   {sessionCVEIds.length} new {sessionCVEIds.length === 1 ? 'entry' : 'entries'} added this session: {sessionCVEIds.join(', ')}
                 </div>
               )}
             </div>
           )}
 
-          {/* ── Handoff Tab ─────────────────────────────────────────────────── */}
+          {/* Handoff Tab */}
           {activeTab === 'handoff' && (
-            <div className="max-w-2xl">
-              <div className="flex items-center justify-between mb-4">
+            <div className="eb-card eb-max-w-2xl">
+              <div className="eb-flex eb-items-center eb-justify-between eb-mb-6">
                 <div>
-                  <h2 className="text-sm font-semibold text-slate-900">Shift Handoff Briefing</h2>
-                  <p className="text-xs text-slate-500 mt-0.5">
+                  <h2 className="eb-card-title" style={{ marginBottom: 'var(--space-1)', fontSize: '1rem', textTransform: 'none' }}>Shift Handoff Briefing</h2>
+                  <p style={{ fontSize: '0.85rem', color: 'var(--color-slate-500)' }}>
                     {sessionCVEIds.length > 0
                       ? `${sessionCVEIds.length} CVEs analyzed this session: ${sessionCVEIds.join(', ')}`
                       : 'No CVEs analyzed this session yet.'}
                   </p>
                 </div>
-                {/* 🔧 FIX: onClick is wired to handleGenerateHandoff — not a stub */}
                 <button
                   onClick={handleGenerateHandoff}
                   disabled={handoffLoading}
-                  className="bg-slate-900 text-white text-sm px-4 py-2 rounded disabled:opacity-40 hover:bg-slate-700 transition-colors flex items-center gap-2"
+                  className="eb-btn-primary"
+                  style={{ width: 'auto' }}
                 >
-                  {handoffLoading && <Loader2 className="w-3 h-3 animate-spin" />}
+                  {handoffLoading && <Loader2 className="eb-icon-spin" />}
                   Generate Briefing
                 </button>
               </div>
 
               {handoffResult ? (
-                <div className="bg-slate-50 border border-slate-200 rounded p-6">
-                  <div className="flex items-center justify-between mb-4 pb-4 border-b border-slate-200">
-                    <span className="text-xs font-mono text-slate-500">
+                <div className="eb-info-box">
+                  <div className="eb-flex eb-items-center eb-justify-between" style={{ marginBottom: 'var(--space-4)', paddingBottom: 'var(--space-4)', borderBottom: '1px solid var(--color-slate-200)' }}>
+                    <span style={{ fontSize: '0.75rem', fontFamily: 'var(--font-mono)', color: 'var(--color-slate-500)' }}>
                       Generated {new Date(handoffResult.generated_at).toLocaleString()}
                     </span>
-                    <span className="text-xs text-slate-500">{handoffResult.cves_triaged} CVEs covered</span>
+                    <span style={{ fontSize: '0.75rem', color: 'var(--color-slate-500)' }}>{handoffResult.cves_triaged} CVEs covered</span>
                   </div>
-                  <pre className="text-sm font-mono text-slate-700 whitespace-pre-wrap leading-relaxed">
+                  <pre style={{ fontSize: '0.9rem', fontFamily: 'var(--font-mono)', color: 'var(--color-slate-700)', whiteSpace: 'pre-wrap', lineHeight: '1.6' }}>
                     {handoffResult.full_narrative}
                   </pre>
                 </div>
               ) : (
-                <div className="border border-dashed border-slate-200 rounded p-12 text-center text-slate-400">
-                  <FileText className="w-8 h-8 mx-auto mb-2 opacity-30" />
-                  <p className="text-sm">Click Generate Briefing to create the shift handoff document.</p>
+                <div className="eb-result-empty" style={{ flexDirection: 'column', padding: 'var(--space-10)' }}>
+                  <FileText style={{ width: '32px', height: '32px', opacity: 0.3, marginBottom: 'var(--space-2)' }} />
+                  <p>Click Generate Briefing to create the shift handoff document.</p>
                 </div>
               )}
             </div>
           )}
 
-          {/* ── Config Tab ─────────────────────────────────────────────────── */}
+          {/* Config Tab */}
           {activeTab === 'config' && (
-            <div className="max-w-lg flex flex-col gap-6">
-              <div className="border border-slate-200 rounded p-4">
-                <h3 className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-3">Hindsight</h3>
-                <div className="flex items-center justify-between">
-                  <span className="text-sm text-slate-700 font-mono text-xs">
+            <div className="eb-max-w-lg eb-pipeline" style={{ gap: 'var(--space-6)' }}>
+              <div className="eb-card">
+                <h3 className="eb-card-title">Hindsight Database</h3>
+                <div className="eb-flex eb-items-center eb-justify-between">
+                  <span className="eb-font-mono eb-text-sm" style={{ color: 'var(--color-slate-700)' }}>
                     {process.env.NEXT_PUBLIC_HINDSIGHT_BASE_URL ?? 'api.hindsight.vectorize.io'}
                   </span>
-                  <div className={`flex items-center gap-1.5 text-xs ${hindsightConnected ? 'text-green-600' : 'text-red-600'}`}>
+                  <div className="eb-flex eb-items-center eb-gap-2 eb-text-xs" style={{ color: hindsightConnected ? 'var(--color-green-600)' : 'var(--color-red-600)' }}>
                     {hindsightConnected
-                      ? <><CheckCircle2 className="w-3 h-3" /> Connected</>
-                      : <><XCircle className="w-3 h-3" /> Offline</>
+                      ? <><CheckCircle2 className="eb-icon-small" /> Connected</>
+                      : <><XCircle className="eb-icon-small" /> Offline</>
                     }
                   </div>
                 </div>
               </div>
 
-              <div className="border border-slate-200 rounded p-4">
-                <h3 className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-3">Budget Cap (USD per run)</h3>
-                {/* 🔧 FIX: controlled input — value + onChange, not defaultValue */}
-                <div className="flex gap-2">
+              <div className="eb-card">
+                <h3 className="eb-card-title">Budget Cap (USD per run)</h3>
+                <div className="eb-flex eb-gap-2">
                   <input
                     type="number"
                     step="0.01"
                     min="0.01"
                     value={budgetValue}
                     onChange={e => setBudgetValue(e.target.value)}
-                    className="border border-slate-200 rounded px-3 py-2 text-sm font-mono w-32 focus:outline-none focus:border-slate-400"
+                    className="eb-input"
+                    style={{ width: '120px' }}
                   />
-                  <button className="border border-slate-200 rounded px-3 py-2 text-sm hover:border-slate-400 transition-colors">
-                    Update
-                  </button>
+                  <button className="eb-btn-secondary">Update</button>
                 </div>
-                <p className="text-xs text-slate-400 mt-2">cascadeflow stops the pipeline if this budget is exceeded.</p>
+                <p style={{ fontSize: '0.75rem', color: 'var(--color-slate-400)', margin: 'var(--space-2) 0 0 0' }}>cascadeflow stops the pipeline if this budget is exceeded.</p>
               </div>
 
-              <div className="border border-slate-200 rounded p-4">
-                <h3 className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-3">Model Routing</h3>
-                <div className="flex items-center gap-3">
-                  <div className="border border-slate-200 rounded px-3 py-2 font-mono text-xs text-slate-600">
+              <div className="eb-card">
+                <h3 className="eb-card-title">Model Routing</h3>
+                <div className="eb-flex eb-items-center eb-gap-4">
+                  <div className="eb-input eb-font-mono eb-text-xs" style={{ background: 'var(--color-slate-50)', color: 'var(--color-slate-600)', width: 'auto' }}>
                     {process.env.CASCADE_CHEAP_MODEL ?? 'llama3-8b-8192'}
                   </div>
-                  <ChevronRight className="w-4 h-4 text-slate-400" />
-                  <div className="border border-slate-900 rounded px-3 py-2 font-mono text-xs text-slate-900 bg-slate-50">
+                  <ChevronRight className="eb-icon-small" style={{ color: 'var(--color-slate-400)' }} />
+                  <div className="eb-input eb-font-mono eb-text-xs" style={{ background: 'var(--color-slate-900)', color: 'white', width: 'auto' }}>
                     {process.env.CASCADE_STRONG_MODEL ?? 'qwen-qwq-32b'}
                   </div>
                 </div>
-                <p className="text-xs text-slate-400 mt-2">Escalates when CVSS ≥ 7.0 or network + low complexity.</p>
+                <p style={{ fontSize: '0.75rem', color: 'var(--color-slate-400)', margin: 'var(--space-2) 0 0 0' }}>Escalates when CVSS ≥ 7.0 or network + low complexity.</p>
               </div>
             </div>
           )}
-
         </main>
       </div>
     </div>

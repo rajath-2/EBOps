@@ -4,8 +4,8 @@ const nextConfig = {
     serverComponentsExternalPackages: [
       '@cascadeflow/core',
       '@cascadeflow/ml',
-      '@xenova/transformers',
       'onnxruntime-node',
+      '@huggingface/transformers'
     ],
   },
 };

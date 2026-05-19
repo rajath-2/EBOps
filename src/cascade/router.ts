@@ -3,12 +3,12 @@ import { CascadeAgent } from '@cascadeflow/core';
 export const cascadeAgent = new CascadeAgent({
   models: [
     {
-      name: process.env.CASCADE_CHEAP_MODEL ?? 'llama3-8b-8192',
+      name: process.env.CASCADE_CHEAP_MODEL ?? 'llama-3.1-8b-instant',
       provider: 'groq',
       cost: 0.0000008,
     },
     {
-      name: process.env.CASCADE_STRONG_MODEL ?? 'qwen-qwq-32b',
+      name: process.env.CASCADE_STRONG_MODEL ?? 'llama-3.3-70b-versatile',
       provider: 'groq',
       cost: 0.00000029,
     },
@@ -27,6 +27,6 @@ export type ModelTier = 'cheap' | 'strong';
  */
 export function getModelName(tier: ModelTier): string {
   return tier === 'cheap'
-    ? (process.env.CASCADE_CHEAP_MODEL ?? 'llama3-8b-8192')
-    : (process.env.CASCADE_STRONG_MODEL ?? 'qwen-qwq-32b');
+    ? (process.env.CASCADE_CHEAP_MODEL ?? 'llama-3.1-8b-instant')
+    : (process.env.CASCADE_STRONG_MODEL ?? 'llama-3.3-70b-versatile');
 }
