@@ -2,6 +2,9 @@ import { NextRequest, NextResponse } from 'next/server';
 import { recallMemory, checkHindsightHealth } from '@/memory/client';
 import { logger } from '@/lib/logger';
 
+export const dynamic = 'force-dynamic';
+
+
 /**
  * GET /api/memory?bank=<bank>&query=<query>
  * Recalls memory from a specific Hindsight bank.
